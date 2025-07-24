@@ -815,20 +815,4 @@ async def main():
 
 if __name__ == "__main__":
     # Check for required packages
-    try:
-        import telegram
-        from telegram.ext import Application
-    except ImportError:
-        print("❌ python-telegram-bot package not found.")
-        print("Install with: pip install python-telegram-bot")
-        exit(1)
     
-    # Check for bot token
-    if not os.getenv('7922102581:AAF33bRlw2uBdTcoZvSfVI-ReXni_-Ubbig'):
-        print("❌ Please set TELEGRAM_BOT_TOKEN environment variable")
-        print("Get your bot token from @BotFather on Telegram")
-        print("Then run: export TELEGRAM_BOT_TOKEN='7922102581:AAF33bRlw2uBdTcoZvSfVI-ReXni_-Ubbig'")
-        exit(1)
-    
-    # Run the bot
-    asyncio.run(main())
