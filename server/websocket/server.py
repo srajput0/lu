@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Ludo Game WebSocket Server with Comprehensive Logging
@@ -620,3 +619,226 @@ async def handle_websocket_connection(websocket, path):
         async for message in websocket:
             try:
                 message_data = json.loads(message)
+                await handle_client_message(websocket, message_data, player_id)
+                
+            except json.JSONDecodeError as e:
+                server_logger.log_error(e, 'json_decode', {
+                    'player_id': player_id,
+                    'raw_message': message[:200]  # First 200 chars
+                })
+                
+                await websocket.send(json.dumps({
+                    'type': 'error',
+                    'payload': {
+                        'message': 'Invalid JSON format'
+                    }
+                }))
+            
+            except Exception as e:
+                server_logger.log_error(e, 'message_processing', {
+                    'player_id': player_id
+                })
+    
+    except websockets.exceptions.ConnectionClosed:
+        server_logger.log_connection_event(websocket, 'disconnected', {
+            'player_id': player_id,
+            'reason': 'connection_closed'
+        })
+    
+    except Exception as e:
+        server_logger.log_error(e, 'websocket_connection', {
+            'player_id': player_id
+        })
+    
+    finally:
+        # Clean up player
+        await game_manager.handle_player_disconnect(player_id)
+        server_logger.log_connection_event(websocket, 'cleanup_completed', {
+            'player_id': player_id
+        })
+
+# ================================
+# HEALTH CHECK AND STATS ENDPOINT
+# ================================
+
+async def handle_http_request(path, request_headers):
+    """Handle HTTP requests for health checks and stats"""
+    try:
+        if path == '/health':
+            stats = game_manager.get_game_stats()
+            stats.update(server_logger.connection_stats)
+            
+            response_body = json.dumps({
+                'status': 'healthy',
+                'timestamp': datetime.utcnow().isoformat(),
+                'stats': stats
+            }, indent=2)
+            
+            return websockets.http.Response(
+                status=200,
+                headers=[('Content-Type', 'application/json')],
+                body=response_body
+            )
+        
+        elif path == '/stats':
+            stats = {
+                'server_stats': server_logger.connection_stats,
+                'game_stats': game_manager.get_game_stats(),
+                'games_detail': [
+                    {
+                        'id': game.id,
+                        'phase': game.phase.value,
+                        'players_count': len(game.players),
+                        'connected_players': sum(1 for p in game.players.values() if p.is_connected),
+                        'created_at': game.created_at.isoformat(),
+                        'updated_at': game.updated_at.isoformat()
+                    }
+                    for game in game_manager.games.values()
+                ]
+            }
+            
+            response_body = json.dumps(stats, indent=2)
+            
+            return websockets.http.Response(
+                status=200,
+                headers=[('Content-Type', 'application/json')],
+                body=response_body
+            )
+        
+        else:
+            return websockets.http.Response(
+                status=404,
+                headers=[('Content-Type', 'text/plain')],
+                body=f"Not Found: {path}"
+            )
+    
+    except Exception as e:
+        server_logger.log_error(e, 'http_request_handler', {'path': path})
+        
+        return websockets.http.Response(
+            status=500,
+            headers=[('Content-Type', 'application/json')],
+            body=json.dumps({'error': 'Internal server error'})
+        )
+
+# ================================
+# PERIODIC TASKS
+# ================================
+
+async def periodic_stats_logger():
+    """Log server statistics periodically"""
+    while True:
+        try:
+            await asyncio.sleep(60)  # Log every minute
+            
+            game_stats = game_manager.get_game_stats()
+            server_stats = server_logger.connection_stats
+            
+            combined_stats = {**game_stats, **server_stats}
+            
+            server_logger.log_structured('info', 'periodic_stats', combined_stats)
+            
+            # Log performance metrics
+            server_logger.log_performance_metric('active_games_count', game_stats['active_games'])
+            server_logger.log_performance_metric('connected_players_count', game_stats['connected_players'])
+            server_logger.log_performance_metric('total_connections', server_stats['total_connections'])
+            
+        except Exception as e:
+            server_logger.log_error(e, 'periodic_stats_logger')
+
+async def cleanup_finished_games():
+    """Periodically clean up finished games"""
+    while True:
+        try:
+            await asyncio.sleep(3600)  # Check every hour
+            
+            current_time = datetime.utcnow()
+            games_to_remove = []
+            
+            for game_id, game in game_manager.games.items():
+                if game.phase == GamePhase.FINISHED:
+                    # Remove games finished more than 24 hours ago
+                    if (current_time - game.updated_at).total_seconds() > 86400:
+                        games_to_remove.append(game_id)
+            
+            for game_id in games_to_remove:
+                game = game_manager.games[game_id]
+                
+                # Clean up player mappings
+                for player_id in game.players:
+                    if player_id in game_manager.player_to_game:
+                        del game_manager.player_to_game[player_id]
+                
+                del game_manager.games[game_id]
+                
+                server_logger.log_game_event('game_cleaned_up', game_id, data={
+                    'reason': 'finished_game_cleanup',
+                    'finished_hours_ago': (current_time - game.updated_at).total_seconds() / 3600
+                })
+            
+            if games_to_remove:
+                server_logger.logger.info(f"🧹 Cleaned up {len(games_to_remove)} finished games")
+        
+        except Exception as e:
+            server_logger.log_error(e, 'cleanup_finished_games')
+
+# ================================
+# MAIN SERVER
+# ================================
+
+async def main():
+    """Main server entry point"""
+    server_logger.logger.info("🚀 Starting Ludo Game WebSocket Server")
+    
+    # Start background tasks
+    asyncio.create_task(periodic_stats_logger())
+    asyncio.create_task(cleanup_finished_games())
+    
+    # Start WebSocket server
+    host = "localhost"
+    port = 8765
+    
+    server_logger.logger.info(f"🌐 Server starting on {host}:{port}")
+    
+    try:
+        # Start server with both WebSocket and HTTP support
+        async with websockets.serve(
+            handle_websocket_connection,
+            host,
+            port,
+            process_request=handle_http_request,
+            ping_interval=30,
+            ping_timeout=10,
+            close_timeout=10,
+            max_size=10**6,  # 1MB max message size
+            max_queue=32,    # Max queued messages
+        ) as server:
+            
+            server_logger.logger.info("✅ WebSocket Server is running!")
+            server_logger.logger.info(f"   🎮 Game WebSocket: ws://{host}:{port}")
+            server_logger.logger.info(f"   📊 Health Check: http://{host}:{port}/health")
+            server_logger.logger.info(f"   📈 Statistics: http://{host}:{port}/stats")
+            
+            # Keep server running
+            await server.wait_closed()
+    
+    except KeyboardInterrupt:
+        server_logger.logger.info("⏹️  Server shutdown requested")
+    
+    except Exception as e:
+        server_logger.log_error(e, 'server_startup')
+        raise
+    
+    finally:
+        server_logger.logger.info("🛑 Server shutdown complete")
+
+if __name__ == "__main__":
+    # Install required packages if not available
+    try:
+        import websockets
+    except ImportError:
+        print("❌ websockets package not found. Install with: pip install websockets")
+        exit(1)
+    
+    # Run server
+    asyncio.run(main())
