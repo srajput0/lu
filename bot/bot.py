@@ -813,6 +813,5 @@ async def main():
     finally:
         bot_logger.logger.info("🛑 Bot shutdown complete")
 
-if __name__ == "__main__":
-    # Check for required packages
-    
+if __name__ == '__main__':
+    main()
