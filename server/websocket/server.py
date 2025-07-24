@@ -795,7 +795,7 @@ async def main():
     asyncio.create_task(cleanup_finished_games())
     
     # Start WebSocket server
-    host = "localhost"
+    host = "134.209.159.121"
     port = 8765
     
     server_logger.logger.info(f"🌐 Server starting on {host}:{port}")
