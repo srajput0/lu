@@ -1,1 +1,49 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ludo Game - Multiplayer 3D</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui-overlay">
+            <div id="game-info">
+                <div id="current-player">Current Player: <span id="player-name">Player 1</span></div>
+                <div id="game-status">Status: <span id="status-text">Waiting for players</span></div>
+                <div id="dice-result">Dice: <span id="dice-value">-</span></div>
+            </div>
+            
+            <div id="player-list">
+                <h3>Players</h3>
+                <ul id="players"></ul>
+            </div>
+            
+            <div id="game-controls">
+                <button id="roll-dice" disabled>Roll Dice</button>
+                <button id="leave-game">Leave Game</button>
+            </div>
+            
+            <div id="chat">
+                <div id="chat-messages"></div>
+                <input type="text" id="chat-input" placeholder="Type a message...">
+                <button id="send-message">Send</button>
+            </div>
+        </div>
+        
+        <div id="game-canvas-container">
+            <canvas id="game-canvas"></canvas>
+        </div>
+        
+        <div id="loading-screen">
+            <div class="loading-spinner"></div>
+            <p>Loading Ludo Game...</p>
+        </div>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
