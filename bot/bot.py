@@ -824,7 +824,7 @@ if __name__ == "__main__":
         exit(1)
     
     # Check for bot token
-    if not os.getenv('TELEGRAM_BOT_TOKEN'):
+    if not os.getenv('7922102581:AAF33bRlw2uBdTcoZvSfVI-ReXni_-Ubbig'):
         print("❌ Please set TELEGRAM_BOT_TOKEN environment variable")
         print("Get your bot token from @BotFather on Telegram")
         print("Then run: export TELEGRAM_BOT_TOKEN='7922102581:AAF33bRlw2uBdTcoZvSfVI-ReXni_-Ubbig'")
