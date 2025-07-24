@@ -677,7 +677,7 @@ async def daily_stats_report():
 async def admin_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin command to get detailed bot statistics"""
     # Check if user is admin (replace with your admin user IDs)
-    ADMIN_USER_IDS = [123456789]  # Replace with actual admin user IDs
+    ADMIN_USER_IDS = [5050578106]  # Replace with actual admin user IDs
     
     if update.effective_user.id not in ADMIN_USER_IDS:
         await update.message.reply_text("❌ Access denied.")
@@ -762,7 +762,7 @@ def setup_bot_handlers(application: Application):
 async def main():
     """Main bot entry point"""
     # Get bot token from environment variable
-    BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    BOT_TOKEN = os.getenv('7922102581:AAF33bRlw2uBdTcoZvSfVI-ReXni_-Ubbig')
     
     if not BOT_TOKEN:
         bot_logger.logger.error("❌ TELEGRAM_BOT_TOKEN environment variable not set!")
@@ -827,7 +827,7 @@ if __name__ == "__main__":
     if not os.getenv('TELEGRAM_BOT_TOKEN'):
         print("❌ Please set TELEGRAM_BOT_TOKEN environment variable")
         print("Get your bot token from @BotFather on Telegram")
-        print("Then run: export TELEGRAM_BOT_TOKEN='your_token_here'")
+        print("Then run: export TELEGRAM_BOT_TOKEN='7922102581:AAF33bRlw2uBdTcoZvSfVI-ReXni_-Ubbig'")
         exit(1)
     
     # Run the bot
